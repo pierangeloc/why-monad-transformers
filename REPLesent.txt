@@ -1,0 +1,115 @@
+| \gExceptions, disjunctions and Monad Transformers
+
+| Pierangelo Cecchetto
+| @pierangelocecc
+
+
+| \y\*\!VEON
+---
+| \* FP and Exceptions
+
+--
+1. FP  => Referential Transparency
+--
+```
+def f1: Int = {
+  val t: Int = throw new Exception("Boom!")
+  try {
+    5 + t
+  } catch { case _ => -1 }
+}
+```
+--
+```
+def f2: Int = {
+  try {
+    5 + ((throw new Exception("Boom!")): Int)
+  } catch { case _ => -1 }
+}
+```
+---
+| \* FP and Exceptions
+--
+1. FP  => Referential Transparency
+--
+2. In Scala there are no Checked Exceptions. \_throws\s is not a language keyword
+--
+3. Methods throwing exceptions are not type-safe
+--
+4. Exceptions cannot work well with higher-order functions
+```
+def map[A,B](l: List[A])(f: A => B): List[B]
+```
+--
+5. Exceptions abruptly break the program flow
+---
+| \* Alternatives to Exceptions
+--
+1. Try
+--
+:green_heart: Wraps exceptions nicely
+:green_heart: Monadic
+--
+:red_circle: Errors are represented only by Exceptions, no custom types
+--
+2. Option
+--
+:green_heart: Monadic
+--
+:red_circle: Hides the cause of the error
+--
+3. Either
+--
+:green_heart: Explicit about the cause of error
+:green_heart: Monadic in Scala 2.12
+:red_circle: Non monadic in previous versions
+--
+4. Scalaz \/, Cats Either
+:green_heart: Explicit about the cause of error
+:green_heart: Monadic
+---
+| \* Example: Create transaction on event trigger
+
+
+```
+def getSubscriptionById(eventId: SubscriptionId): String \/ Subscription = ???
+def getTaskById(taskId: TaskId): String \/ Task = ???
+def createTransactionRequest(task: Task): String \/ TransactionRequest = ???
+def initiateTransaction(txReq: TransactionRequest): String \/ Transaction = ???
+
+val eventSubscriptionId = SubscriptionId(UUID.randomUUID)
+```
+--
+```
+
+//linear but cumbersome
+val tx = getEventSubscriptionById(eventSubscriptionId).flatMap { evSubscr =>
+  getTaskById(evSubscr.taskId).flatMap { task =>
+    createTransactionRequest(task).flatMap { txReq =>
+      initateTransaction(txReq)
+    }
+  }
+}
+```
+---
+| \* Example: Create transaction on event trigger
+
+
+```
+def getSubscriptionById(eventId: SubscriptionId): String \/ Subscription = ???
+def getTaskById(taskId: TaskId): String \/ Task = ???
+def createTransactionRequest(task: Task): String \/ TransactionRequest = ???
+def initiateTransaction(txReq: TransactionRequest): String \/ Transaction = ???
+
+val eventSubscriptionId = EventSubscriptionId(UUID.randomUUID)
+```
+```
+
+//equivalent code
+val tx = for {
+    evSubscr <- getEventSubscriptionById(eventSubscriptionId)
+    task <- getTaskById(evSubscr.taskId)
+    txReq <- createTransactionRequest(task)
+    tx <- initateTransaction(txReq)
+  } yield tx
+```
