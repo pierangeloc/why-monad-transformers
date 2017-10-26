@@ -1,6 +1,6 @@
-# Free vs tagless final
+# Monads and Monad Transformers
 
-Example code and slides showing how to implement a hypothetical photo storage service in a couple of different ways: using the (cats) Free monad and using "tagless final" style.
+A tour around the motivations and concepts of Monads and their (non-)compositions.
 
 ## To view the slides
 

@@ -9,7 +9,7 @@
 | \* FP and Exceptions
 
 --
-1. FP  => Referential Transparency
+1. FP  => Referential Transparency,  Substitution Principle
 --
 ```
 def f1: Int = {
