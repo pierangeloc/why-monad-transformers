@@ -5,18 +5,14 @@ import scalaz._
 import Scalaz._
 import java.util.UUID
 
-import cats.~>
-import cats.data.OptionT
-import cats.free.Free
-import cats.implicits._
 
 import scala.concurrent._
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import com.github.pierangeloc.mt._
-import free._
-import free.Programs._
-import tagless._
+import com.github.pierangeloc.mt.example._
+
+type F[A] = Option[A]
 
 f

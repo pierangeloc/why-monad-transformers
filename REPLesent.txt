@@ -1,4 +1,4 @@
-| \gExceptions, disjunctions and Monad Transformers
+| \gFunctions, Effects, Composition
 
 | Pierangelo Cecchetto
 | @pierangelocecc
@@ -6,110 +6,224 @@
 
 | \y\*\!VEON
 ---
-| \* FP and Exceptions
+| \* Functions composition
+--
+
+
+```
+type A = String
+type B = Int
+type C = Boolean
+```
 
 --
-1. FP  => Referential Transparency,  Substitution Principle
+
+
+```
+val f: A => B = s => s.length
+val g: B => C = n => n % 2 == 0
+```
+
+--
+
+Types Aligned :thumbsup::thumbsup:
+
+--
+
+Compose
+
+```
+val evenLength: A => C = s => g(f(s))
+```
+--
+
+```
+val evenLength = g compose f
+val evenLength2 = f andThen g
+```
+
+--
+N.B.: Function Composition is associative
+(f compose g) compose h === f compose (g compose h)
+
+---
+| \* Effectful Computations
+--
+
 --
 ```
-def f1: Int = {
-  val t: Int = throw new Exception("Boom!")
-  try {
-    5 + t
-  } catch { case _ => -1 }
-}
+def mean(xs: List[Int]): Int = xs.sum / xs.length
 ```
 --
+
 ```
-def f2: Int = {
-  try {
-    5 + ((throw new Exception("Boom!")): Int)
-  } catch { case _ => -1 }
-}
+mean(List(4, 6, 5))
+```
+--
+
+:see_no_evil:
+
+```
+mean(List())
 ```
 ---
-| \* FP and Exceptions
+
+| \* Effectful Computations / 2
 --
-1. FP  => Referential Transparency
---
-2. In Scala there are no Checked Exceptions. \_throws\s is not a language keyword
---
-3. Methods throwing exceptions are not type-safe
---
-4. Exceptions cannot work well with higher-order functions
+
 ```
-def map[A,B](l: List[A])(f: A => B): List[B]
+def mean(xs: List[Int]): Option[Int] =
+  if (xs.empty) None else Some(xs.sum / xs.length)
+```
+
+--
+
+```
+mean(List(4, 6, 5))
 ```
 --
-5. Exceptions abruptly break the program flow
+
+```
+mean(List())
+```
+
 ---
-| \* Alternatives to Exceptions
---
-1. Try
---
-:green_heart: Wraps exceptions nicely
-:green_heart: Monadic
---
-:red_circle: Errors are represented only by Exceptions, no custom types
---
-2. Option
---
-:green_heart: Monadic
---
-:red_circle: Hides the cause of the error
---
-3. Either
---
-:green_heart: Explicit about the cause of error
-:green_heart: Monadic in Scala 2.12
-:red_circle: Non monadic in previous versions
---
-4. Scalaz \/, Cats Either
-:green_heart: Explicit about the cause of error
-:green_heart: Monadic
+
+| \* Effectful computations composition
+
+```
+val f: A => F[B] = ???
+val g: B => F[C] = ???
+
+def compose(f: A => F[B], g: B => F[C]): A => F[C] = ???
+```
 ---
-| \* Example: Create transaction on event trigger
 
+| \* Effectful computations composition
 
 ```
-def getSubscriptionById(eventId: SubscriptionId): String \/ Subscription = ???
-def getTaskById(taskId: TaskId): String \/ Task = ???
-def createTransactionRequest(task: Task): String \/ TransactionRequest = ???
-def initiateTransaction(txReq: TransactionRequest): String \/ Transaction = ???
+def creditCard(cc: String): Option[CreditCard] = creditCards.find(_.number == cc)
 
-val eventSubscriptionId = SubscriptionId(UUID.randomUUID)
+def stuffToBuy(cc: CreditCard): Option[Item] = if (cc.balance < 250)
+    None
+  else if (250 < cc.balance && cc.balance < 350)
+    Some(Item.Shoes)
+  else
+    Some(Item.PS4)
 ```
 --
-```
 
-//linear but cumbersome
-val tx = getEventSubscriptionById(eventSubscriptionId).flatMap { evSubscr =>
-  getTaskById(evSubscr.taskId).flatMap { task =>
-    createTransactionRequest(task).flatMap { txReq =>
-      initateTransaction(txReq)
-    }
+```
+val itemByCC: String => Option[Item] = compose(creditCard, stuffToBuy)
+```
+---
+
+| \* Effectful computations composition
+
+```
+def composeOpt[A, B, C](f: A => Option[B], g: B => Option[C]): A => Option[C] =
+  a => {
+    for {
+      b <- f(a)
+      c <- g(b)
+    } yield c
   }
-}
+```
+--
+
+```
+def itemByCC: String => Option[Item] = composeOpt(creditCard, stuffToBuy)
+```
+
+---
+
+| \* Effectful computations composition
+
+This works for any Monad
+
+```
+def composeOpt[A, B, C, F[_]](f: A => F[B], g: B => F[C])
+  (implicit F: Monad[F]): A => F[C] =
+  a => {
+    for {
+      b <- f(a)
+      c <- g(b)
+    } yield c
+  }
 ```
 ---
-| \* Example: Create transaction on event trigger
 
+| \* Effectful computations composition
+| \* Kleisli
+
+Reasonable patterns already exist (in scalaz)!!!
+--
 
 ```
-def getSubscriptionById(eventId: SubscriptionId): String \/ Subscription = ???
-def getTaskById(taskId: TaskId): String \/ Task = ???
-def createTransactionRequest(task: Task): String \/ TransactionRequest = ???
-def initiateTransaction(txReq: TransactionRequest): String \/ Transaction = ???
+case class Kleisli[M[_], A, B](run: A => M[B]) {
 
-val eventSubscriptionId = EventSubscriptionId(UUID.randomUUID)
-```
+  def andThen[C](k: Kleisli[M, B, C])(implicit b: Monad[M]) =
+    Kleisli[M, A, C]((a: A) => b.bind(this(a))(k.run))
+
+  def compose[C](k: Kleisli[M, C, A])(implicit b: Monad[M]) =
+    k andThen this
+}
 ```
 
-//equivalent code
-val tx = for {
-    evSubscr <- getEventSubscriptionById(eventSubscriptionId)
-    task <- getTaskById(evSubscr.taskId)
-    txReq <- createTransactionRequest(task)
-    tx <- initateTransaction(txReq)
-  } yield tx
+---
+| \* Effectful computations composition
+| \* Kleisli
+
 ```
+val creditCardK = Kleisli(creditCard)
+val stuffToBuyK = Kleisli(stuffToBuy)
+```
+--
+
+```
+
+val itemByCCK =  stuffToBuyK compose creditCardK
+
+```
+
+--
+
+```
+
+itemByCCK.run("5413330300001006")
+
+```
+
+---
+| \* Effectful computations composition
+| \* Kleisli equivalent to Monad
+
+```
+class Monad[F[_]] {
+  def pure[A]: F[A]
+  def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B]
+
+  def map[A, B](fa: F[A])(f: A => B) = flatMap(fa)(a => pure(f(a))
+  def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] = ...
+}
+```
+--
+```
+class Monad[F[_]] {
+  def pure[A]: F[A]
+  def compose[A, B, C](f: A => F[B], g: B => F[C]): A => F[C] =
+
+  def flatMap[A, B](fa: F[A])(f: A => F[B]): F[B] = ...
+  def map[A, B](fa: F[A])(f: A => B) = flatMap(fa)(a => pure(f(a))
+}
+```
+
+---
+| \* Effectful computations composition
+| \* Kleisli equivalent to Monad
+| \* Associativity law much simpler with Kleisli
+| \* ReaderT is a Kleisli
+
+
+
+-

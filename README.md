@@ -1,6 +1,6 @@
-# Monads and Monad Transformers
+# Monads, examples and formulations
 
-A tour around the motivations and concepts of Monads and their (non-)compositions.
+A view on the Monad concepts and their different formulations
 
 ## To view the slides
 
