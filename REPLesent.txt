@@ -223,6 +223,9 @@ class Monad[F[_]] {
 | \* Kleisli equivalent to Monad
 | \* Associativity law much simpler with Kleisli
 | \* ReaderT is a Kleisli
+--
+
+| \* ...to be continued
 
 
 
