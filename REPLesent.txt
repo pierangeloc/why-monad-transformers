@@ -196,7 +196,6 @@ itemByCCK.run("5413330300001006")
 
 ---
 | \* Effectful computations composition
-| \* Kleisli equivalent to Monad
 
 ```
 class Monad[F[_]] {
@@ -208,6 +207,9 @@ class Monad[F[_]] {
 }
 ```
 --
+
+| \* Kleisli equivalent to Monad
+
 ```
 class Monad[F[_]] {
   def pure[A]: F[A]
@@ -220,13 +222,16 @@ class Monad[F[_]] {
 
 ---
 | \* Effectful computations composition
-| \* Kleisli equivalent to Monad
-| \* Associativity law much simpler with Kleisli
-| \* ReaderT is a Kleisli
+
+< :red_circle: Kleisli equivalent to Monad
+
+< :red_circle: Associativity law is simpler with Kleisli
+--
+
+< :red_circle: ReaderT is a Kleisli
 --
 
 | \* ...to be continued
 
 
 
--
